@@ -1,8 +1,8 @@
-```1.1.2-Screener```
+# ```1.1.2-Screener```
 
 A simple script to screen for 1.1.2 option trades.
 
-# Setup & Execution
+## Setup & Execution
 ```
 # Clone Script
 git clone https://github.com/pattertj/1.1.2-Screener.git
