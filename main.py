@@ -4,8 +4,10 @@ from tda import auth, client
 import httpx
 import datetime as dt
 from dotenv import load_dotenv
+import chromedriver_autoinstaller
 
 load_dotenv()
+chromedriver_autoinstaller.install()
 
 ######################
 ### Trade Settings ###
@@ -54,7 +56,7 @@ def create_client():
         c = auth.client_from_token_file(token_path, api_key)
     except FileNotFoundError:
         from selenium import webdriver
-        with webdriver.Edge() as driver:
+        with webdriver.Chrome() as driver:
             c = auth.client_from_login_flow(
             driver, api_key, redirect_uri, token_path)
                 
