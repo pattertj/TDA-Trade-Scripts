@@ -33,12 +33,12 @@ def get_expiration(expDateMap: dict):
 
     for expiration, details in expDateMap.items():
         split_exp = expiration.split(":", 1)
-        exp = dt.datetime.strptime(split_exp[0], "%Y-%m-%d")
         dte = int(split_exp[1])
         delta = abs(target_dte - dte)
     
         if delta < distance:
             closest_exp = details
+            distance = delta
 
     return closest_exp
 
