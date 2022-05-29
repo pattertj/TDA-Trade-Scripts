@@ -43,7 +43,7 @@ def get_expiration(expDateMap: dict):
     return closest_exp
 
 def get_option_chain(c: client.Client):
-    r = c.get_option_chain(symbol=symbol, strike_range=client.Client.Options.StrikeRange.OUT_OF_THE_MONEY, option_type=client.Client.Options.Type.STANDARD, from_date=dt.datetime.now() + dt.timedelta(days=40), to_date=dt.datetime.now() + dt.timedelta(days=50)  )
+    r = c.get_option_chain(symbol=symbol, strike_range=client.Client.Options.StrikeRange.OUT_OF_THE_MONEY, option_type=client.Client.Options.Type.STANDARD, from_date=dt.datetime.now() + dt.timedelta(days=target_dte-10), to_date=dt.datetime.now() + dt.timedelta(days=target_dte+10)  )
     assert r.status_code == httpx.codes.OK, r.raise_for_status()
     return r.json()
 
@@ -97,6 +97,9 @@ def get_spread_strikes(spread_price_target, spread_width_target, closest_exp):
 
         short = next((type for type in short_details if type['settlementType'] == 'P'), None)
         long = next((type for type in long_details if type['settlementType'] == 'P'), None)
+
+        if short is None or long is None:
+            continue
 
         price_width = long['ask']-short['bid']
         delta = abs(spread_price_target - price_width)
