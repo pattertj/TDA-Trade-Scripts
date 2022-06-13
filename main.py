@@ -76,7 +76,7 @@ def get_otm_strike(closest_exp: dict):
 
         price = (short['bid']+short['ask'])/2
         delta = abs(otm_price_target - price)
-        if delta < distance:
+        if delta < distance and otm_price_target < price:
             distance = delta
             otm_put = short
     return otm_put
@@ -98,7 +98,7 @@ def get_spread_strikes(spread_price_target, spread_width_target, closest_exp):
         short = next((type for type in short_details if type['settlementType'] == 'P'), None)
         long = next((type for type in long_details if type['settlementType'] == 'P'), None)
 
-        price_width = long['ask']-short['bid']
+        price_width = (long['ask']+short['ask']-short['bid']-long['bid'])/2
         delta = abs(spread_price_target - price_width)
 
         if delta < distance:
@@ -133,7 +133,7 @@ ticker = get_quote(symbol, c)
 print(f"2x {otm_put['description']}")
 print(f"1x {best_short['description']}")
 print(f"1x {best_long['description']}")
-print(f"Short Premium: 2x ${otm_put['bid']}")
+print(f"Short Premium: 2x ${(otm_put['bid'] + otm_put['ask'])/2}")
 print(f"Spread Premium: 1x ${best_price}")
-print(f"Total Premium: ${2*float(otm_put['bid']) - float(best_price)}")
+print(f"Total Premium: ${2*float((otm_put['bid'] + otm_put['ask'])/2) - float(best_price)}")
 print(f"Downside Protection: {1-(otm_put['strikePrice']/ticker[symbol]['lastPrice'])}%")
