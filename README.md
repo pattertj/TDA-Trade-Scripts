@@ -1,11 +1,11 @@
-# ```1.1.2-Screener```
+# ```tda-trade-scripts```
 
-A simple script to screen for 1.1.2 option trades.
+A collection of tda trading scripts I use or have used
 
 ## Setup & Execution
 ```
 # Clone Script
-git clone https://github.com/pattertj/1.1.2-Screener.git
+git clone https://github.com/pattertj/tda-trade-scripts.git
 
 # Install dependencies
 pipenv install
