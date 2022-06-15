@@ -14,8 +14,9 @@ chromedriver_autoinstaller.install()
 ######################
 symbol = os.getenv('SYMBOL')
 target_dte = int(os.getenv('TARGET_DTE'))
-trade_type = os.getenv('TRADE_TYPE')
+trade_type = (os.getenv('TRADE_TYPE'))
 otm_price_target = float(os.getenv('OTM_PRICE_TARGET'))
+otm_percent_target = float(os.getenv('OTM_PERCENT_TARGET'))
 spread_price_target = float(os.getenv('SPREAD_PRICE_TARGET'))
 spread_width_target = float(os.getenv('SPREAD_WIDTH_TARGET'))
 
@@ -65,18 +66,22 @@ def create_client():
 ########################
 ### STRIKE FUNCTIONS ###
 ########################
-def get_otm_strike(closest_exp: dict):
+def get_otm_strike(closest_exp: dict, ticker: dict):
     distance = math.inf
     otm_put = None
     for details in closest_exp.values():
         short = next((type for type in details if type['settlementType'] == 'P'), None)
-    
+
         if short is None:
             continue
 
+        percent_otm = 1 - (short['strikePrice'] / ticker[symbol]['lastPrice'])
+        if otm_percent_target > 0 and percent_otm < otm_percent_target:
+            continue
+            
         price = (short['bid']+short['ask'])/2
         delta = abs(otm_price_target - price)
-        if delta < distance and otm_price_target < price:
+        if delta < distance:
             distance = delta
             otm_put = short
     return otm_put
@@ -118,26 +123,31 @@ c = create_client()
 # Get the Option Chain
 option_chain = get_option_chain(c)
 
-if trade_type == "1.1.2":
+if trade_type in ["1.1.2", "1.1.1"]:
     expDateMap = option_chain['putExpDateMap']
 
 # Get Closest Expiration
 expiry = get_expiration(expDateMap)
 
+# Get Current Price
+ticker = get_quote(symbol, c)
+
 # Find OTM Strike
-otm_put = get_otm_strike(expiry)
+otm_put = get_otm_strike(expiry, ticker)
 
 # Find Spread
 best_short, best_long, best_price = get_spread_strikes(spread_price_target, spread_width_target, expiry)
 
-# Get Current Price
-ticker = get_quote(symbol, c)
+if trade_type == "1.1.2":
+    otm_count = 2
+elif trade_type == "1.1.1":
+    otm_count = 1
 
 # Print Results
-print(f"2x {otm_put['description']}")
+print(f"{otm_count}x {otm_put['description']}")
 print(f"1x {best_short['description']}")
 print(f"1x {best_long['description']}")
-print(f"Short Premium: 2x ${(otm_put['bid'] + otm_put['ask'])/2}")
+print(f"Short Premium: {otm_count}x ${(otm_put['bid'] + otm_put['ask'])/2}")
 print(f"Spread Premium: 1x ${best_price}")
-print(f"Total Premium: ${2*float((otm_put['bid'] + otm_put['ask'])/2) - float(best_price)}")
+print(f"Total Premium: ${otm_count*float((otm_put['bid'] + otm_put['ask'])/2) - float(best_price)}")
 print(f"Downside Protection: {1-(otm_put['strikePrice']/ticker[symbol]['lastPrice'])}%")
