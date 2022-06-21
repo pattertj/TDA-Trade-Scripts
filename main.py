@@ -106,7 +106,7 @@ def get_spread_strikes(spread_price_target, spread_width_target, closest_exp):
         if short is None or long is None:
             continue
         
-        price_width = (long['ask']+short['ask']-short['bid']-long['bid'])/2
+        price_width = (long['ask']+long['bid'])/2 - (short['ask']+short['bid'])/2
 
         delta = abs(spread_price_target - price_width)
 
