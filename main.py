@@ -16,7 +16,7 @@ symbol = os.getenv('SYMBOL')
 target_dte = int(os.getenv('TARGET_DTE'))
 trade_type = (os.getenv('TRADE_TYPE'))
 otm_price_target = float(os.getenv('OTM_PRICE_TARGET'))
-otm_percent_target = float(os.getenv('OTM_PERCENT_TARGET'))
+otm_percent_target = float(os.getenv('MIN_OTM_PERCENT'))
 spread_price_target = float(os.getenv('SPREAD_PRICE_TARGET'))
 spread_width_target = float(os.getenv('SPREAD_WIDTH_TARGET'))
 
@@ -68,14 +68,14 @@ def create_client():
 ########################
 def get_otm_strike(closest_exp: dict, ticker: dict):
     distance = math.inf
-    otm_put = None
+    otm_strike = None
     for details in closest_exp.values():
         short = next((type for type in details if type['settlementType'] == 'P'), None)
 
         if short is None:
             continue
 
-        percent_otm = 1 - (short['strikePrice'] / ticker[symbol]['lastPrice'])
+        percent_otm = abs(1 - (short['strikePrice'] / ticker[symbol]['lastPrice']))
         if otm_percent_target > 0 and percent_otm < otm_percent_target:
             continue
             
@@ -83,10 +83,10 @@ def get_otm_strike(closest_exp: dict, ticker: dict):
         delta = abs(otm_price_target - price)
         if delta < distance:
             distance = delta
-            otm_put = short
-    return otm_put
+            otm_strike = short
+    return otm_strike
 
-def get_spread_strikes(spread_price_target, spread_width_target, closest_exp):
+def get_spread_strikes(spread_price_target: float, spread_width_target: float, closest_exp: dict):
     distance = math.inf
     best_short = None
     best_long = None
@@ -124,24 +124,29 @@ c = create_client()
 option_chain = get_option_chain(c)
 
 if trade_type in ["1.1.2", "1.1.1"]:
-    expDateMap = option_chain['putExpDateMap']
+    spread_expiry = get_expiration(option_chain['putExpDateMap'])
+    otm_expiry = spread_expiry
 
-# Get Closest Expiration
-expiry = get_expiration(expDateMap)
+elif trade_type == "Bear 1.1.2":
+    # Get Closest Expiration
+    spread_expiry = get_expiration(option_chain['putExpDateMap'])
+    otm_expiry = get_expiration(option_chain['callExpDateMap'])
 
 # Get Current Price
 ticker = get_quote(symbol, c)
 
 # Find OTM Strike
-otm_put = get_otm_strike(expiry, ticker)
+otm_put = get_otm_strike(otm_expiry, ticker)
 
 # Find Spread
-best_short, best_long, best_price = get_spread_strikes(spread_price_target, spread_width_target, expiry)
+best_short, best_long, best_price = get_spread_strikes(spread_price_target, spread_width_target, spread_expiry)
 
-if trade_type == "1.1.2":
-    otm_count = 2
-elif trade_type == "1.1.1":
+if trade_type == "1.1.1":
     otm_count = 1
+elif trade_type in ["1.1.2", "Bear 1.1.2"]:
+    otm_count = 2
+else:
+    otm_count = 0
 
 # Print Results
 print(f"{otm_count}x {otm_put['description']}")
@@ -150,4 +155,4 @@ print(f"1x {best_long['description']}")
 print(f"Short Premium: {otm_count}x ${(otm_put['bid'] + otm_put['ask'])/2}")
 print(f"Spread Premium: 1x ${best_price}")
 print(f"Total Premium: ${otm_count*float((otm_put['bid'] + otm_put['ask'])/2) - float(best_price)}")
-print(f"Downside Protection: {100*(1-(otm_put['strikePrice']/ticker[symbol]['lastPrice']))}%")
+print(f"Protection: {100*(1-(otm_put['strikePrice']/ticker[symbol]['lastPrice']))}%")
